@@ -1,5 +1,6 @@
 import argparse
 import subprocess
+from Bio import SeqIO
 
 # Parse command-line arguments
 parser = argparse.ArgumentParser()
@@ -31,9 +32,36 @@ num_blast_hits = len(sorted_output) - 1  # Exclude the header line
 
 print(f"Potential Targets: {num_blast_hits}")
 
-# Write sorted BLAST output to a file
-output_file = "orthologous_targets.txt"
+# Write sorted BLAST output to a file with the name of the input files
+output_file = f"{args.genes1}_vs_{args.genes2}_orthologs.txt"
 with open(output_file, "w") as file:
     file.write("\n".join(sorted_output))
 
 print(f"Output written to {output_file}")
+
+# Get the sequences of queries and targets
+queries = set()
+targets = set()
+
+for line in sorted_output[1:]:
+    query_id, subject_id = line.split('\t')[:2]
+    queries.add(query_id)
+    targets.add(subject_id)
+
+# Write sequences of queries to a FASTA file with the name of the input file
+query_sequences = SeqIO.to_dict(SeqIO.parse(args.genes1, "fasta"))
+query_output_file = f"{args.genes1}.targets.fasta"
+with open(query_output_file, "w") as f:
+    for query_id in queries:
+        SeqIO.write(query_sequences[query_id], f, "fasta")
+
+print(f"Filtered queries written to {query_output_file}")
+
+# Write sequences of targets to a FASTA file with the name of the input file
+target_sequences = SeqIO.to_dict(SeqIO.parse(args.genes2, "fasta"))
+target_output_file = f"{args.genes2}.targets.fasta"
+with open(target_output_file, "w") as f:
+    for target_id in targets:
+        SeqIO.write(target_sequences[target_id], f, "fasta")
+
+print(f"Filtered targets written to {target_output_file}")
