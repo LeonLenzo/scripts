@@ -1,12 +1,11 @@
 import os
 from collections import defaultdict
-from Bio import SeqIO, AlignIO, Align
+from Bio import SeqIO, AlignIO
 from Bio.Align import MultipleSeqAlignment
-from Bio.Align.Applications import MafftCommandline
-import subprocess
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from Bio.motifs import Motif
+from Bio.motifs import create
+import subprocess
 
 def regroup_fasta_files(working_directory):
     """Regroup sequences in FASTA files by gene instead of isolate."""
@@ -14,7 +13,7 @@ def regroup_fasta_files(working_directory):
 
     # Read all consensus files in the working directory
     for file_name in os.listdir(working_directory):
-        if file_name.endswith('.fasta'):
+        if file_name.endswith('.consensus'):
             file_path = os.path.join(working_directory, file_name)
             for record in SeqIO.parse(file_path, 'fasta'):
                 header_parts = record.id.split('.')
@@ -30,16 +29,16 @@ def regroup_fasta_files(working_directory):
         SeqIO.write(sequences, output_file_path, 'fasta')
 
 def align_sequences(input_file, output_file):
-    """Perform multiple sequence alignment using MAFFT."""
+    """Perform multiple sequence alignment using MUSCLE."""
     with open(output_file, 'w') as out_handle:
-        subprocess.run(['mafft', '--auto', '--quiet', '--reorder', input_file], stdout=out_handle, check=True)
+        subprocess.run(['muscle', '-in', input_file, '-out', output_file, '-quiet'], stdout=out_handle, check=True)
 
 def generate_consensus(alignment_file):
     """Generate a consensus sequence from the alignment."""
     alignment = AlignIO.read(alignment_file, 'fasta')
-    new_style_alignment = Align.Alignment(alignment)
-    motif = Motif(alphabet=new_style_alignment.alphabet, instances=new_style_alignment)
-    return motif.degenerate_consensus
+    motif = create(alignment)
+    consensus = motif.degenerate_consensus
+    return str(consensus)
 
 def align_and_generate_consensus(working_directory):
     """Align sequences in FASTA files and generate consensus sequences."""
